@@ -143,7 +143,7 @@ const validators = {
     // 이메일 필드 검증 함수
     email: (email) => {
         // 1단계: 필수 입력 확인
-        if (isEmpty(emai)) {
+        if (isEmpty(email)) {
             return { 
                 isValid: false, 
                 message: messages.required.email, 
