@@ -1,265 +1,151 @@
-import { stringUtils } from '../utils/helpers';
+// UI 관리 모듈 - 구조분해할당과 화살표 함수 사용
 
-//destructuring assignment
-const { isEmpty, safeTrim } = stringUtils;
-
-// 유효성 검사 모듈 - 구조분해할당과 화살표 함수 사용
-
-// 정규식 패턴들 - 각 필드의 유효한 형식을 정의
-export const patterns = {
-    // 학번 패턴: 영문 1글자 + 숫자 5글자 (예: S12345, A98765)
-    // ^ : 문자열 시작, [A-Za-z] : 대소문자 영문 1글자, \d{5} : 숫자 5개, $ : 문자열 끝
-    studentNumber: /^[A-Za-z]\d{5}$/,
-    
-    // 전화번호 패턴: 숫자, 하이픈(-), 공백만 허용 (예: 010-1234-5678, 02 123 4567)
-    // [0-9-\s] : 숫자, 하이픈, 공백문자, + : 1개 이상
-    phoneNumber: /^[0-9-\s]+$/,
-    
-    // 이메일 패턴: 기본적인 이메일 형식 검증 (예: user@domain.com)
-    // [^\s@]+ : 공백과 @가 아닌 문자 1개 이상, @ : @ 기호, \. : 점(.) 문자
-    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-}
-
-// 에러 메시지들을 타입별로 분류하여 관리
-export const messages = {
-    // 필수 입력 필드가 비어있을 때 표시할 메시지들
-    required: {
-        name: '이름을 입력해주세요.',
-        studentNumber: '학번을 입력해주세요.',
-        address: '주소를 입력해주세요.',
-        phoneNumber: '전화번호를 입력해주세요.',
-        email: '이메일을 입력해주세요.'
+// 메시지 스타일 설정
+const messageStyles = {
+    success: {
+        color: '#28a745',
+        backgroundColor: '#d4edda',
+        borderColor: '#c3e6cb'
     },
-    
-    // 입력 형식이 올바르지 않을 때 표시할 메시지들
-    format: {
-        studentNumber: '학번은 영문(1글자) + 숫자(5자리)로 입력해주세요. 예: S12345',
-        phoneNumber: '올바른 전화번호 형식이 아닙니다. 예: 010-1234-5678',
-        email: '올바른 이메일 형식이 아닙니다. 예: user@example.com'
+    error: {
+        color: '#dc3545',
+        backgroundColor: '#f8d7da',
+        borderColor: '#f5c6cb'
     }
 }
 
-// 개별 필드별 검증 함수들을 담은 객체 (화살표 함수 사용)
-const validators = {
-    // 이름 필드 검증 함수
-    name: (name) => {
-        // 1단계: 필수 입력 확인 - 값이 없거나 공백만 있는 경우
-        // !name : null, undefined, 빈 문자열을 체크
-        // name.trim().length === 0 : 공백만 있는 문자열을 체크
-        if (isEmpty(name)) {
-            return { 
-                isValid: false,                    // 검증 실패
-                message: messages.required.name,   // 에러 메시지
-                field: 'name'                      // 문제가 발생한 필드명
-            }
-        }
-        
-        // 2단계: 최소 길이 확인 - 이름은 최소 2글자 이상이어야 함
-        if (safeTrim(name).length < 2) {
-            return { 
-                isValid: false, 
-                message: '이름은 최소 2글자 이상이어야 합니다.', 
-                field: 'name' 
-            }
-        }
-        
-        // 3단계: 모든 검증 통과
-        return { isValid: true }
+// UI 상태 관리
+let messageTimer = null
+
+// UI 서비스 객체
+export const uiService = {
+    // 성공 메시지 표시 (화살표 함수)
+    showSuccess: (message) => {
+        uiService.showMessage(message, 'success')
     },
-    
-    // 학번 필드 검증 함수
-    studentNumber: (studentNumber) => {
-        // 1단계: 필수 입력 확인
-        if (isEmpty(studentNumber)) {
-            return { 
-                isValid: false, 
-                message: messages.required.studentNumber, 
-                field: 'studentNumber' 
-            }
-        }
-        
-        // 2단계: 정규식 패턴 매칭 확인
-        // patterns.studentNumber.test() : 정규식이 문자열과 매치되는지 확인 (true/false 반환)
-        // .trim() : 앞뒤 공백 제거 후 검사
-        if (!patterns.studentNumber.test(safeTrim(studentNumber))) {
-            return { 
-                isValid: false, 
-                message: messages.format.studentNumber, 
-                field: 'studentNumber' 
-            }
-        }
-        
-        // 3단계: 모든 검증 통과
-        return { isValid: true }
+
+    // 에러 메시지 표시 (화살표 함수)
+    showError: (message) => {
+        uiService.showMessage(message, 'error')
     },
-    
-    // 주소 필드 검증 함수
-    address: (address) => {
-        // 1단계: 필수 입력 확인
-        if (isEmpty(address)) {
-            return { 
-                isValid: false, 
-                message: messages.required.address, 
-                field: 'address' 
-            }
-        }
-        
-        // 2단계: 최소 길이 확인 - 주소는 너무 짧으면 유효하지 않을 가능성이 높음
-        if (safeTrim(address).length < 5) {
-            return { 
-                isValid: false, 
-                message: '주소는 최소 5글자 이상 입력해주세요.', 
-                field: 'address' 
-            }
-        }
-        
-        // 3단계: 모든 검증 통과
-        return { isValid: true }
+
+    // 메시지 표시 함수 (구조분해할당 활용)
+    showMessage: (message, type = 'error') => {
+        // DOM에서 메시지를 표시할 HTML 요소를 찾습니다
+        // id가 'formError'인 요소 (보통 <span> 또는 <div>)        
+        const errorSpan = document.getElementById('formError')
+
+        // 요소가 존재하지 않으면 함수를 종료합니다 (방어적 프로그래밍)
+        if (!errorSpan) return
+
+        // 이전에 설정된 자동 숨김 타이머가 있다면 제거합니다
+        // 새 메시지가 나타나면 이전 메시지의 타이머를 취소해야 합니다
+        uiService.clearMessageTimer()
+
+        // 스타일 가져오기 (구조분해할당)
+        /*
+            // type이 'success'인 경우
+            messageStyles['success'] // { color: '#28a745', backgroundColor: '#d4edda', borderColor: '#c3e6cb' }
+
+            // type이 'error'인 경우  
+            messageStyles['error']   // { color: '#dc3545', backgroundColor: '#f8d7da', borderColor: '#f5c6cb' }
+
+            // type이 'unknown'인 경우 (존재하지 않는 키)
+            messageStyles['unknown'] // undefined
+
+            // 만약 messageStyles[type]이 undefined라면 messageStyles.error를 사용
+            messageStyles[type] || messageStyles.error
+
+            // 예시:
+            messageStyles['unknown'] || messageStyles.error  // messageStyles.error를 반환
+            messageStyles['success'] || messageStyles.error  // messageStyles['success']를 반환
+
+            // 최종적으로 선택된 객체에서 속성들을 추출
+            const { color, backgroundColor, borderColor } = 선택된객체
+
+            // 실제로는 이렇게 동작:
+            const selectedStyle = messageStyles[type] || messageStyles.error
+            const color = selectedStyle.color
+            const backgroundColor = selectedStyle.backgroundColor  
+            const borderColor = selectedStyle.borderColor
+
+            1. messageStyles[type]에서 해당 타입의 스타일을 찾습니다.
+            2. 만약 type이 잘못되었거나 없으면 기본값으로 error 스타일을 사용합니다.
+            3. 선택된 객체에서 color, backgroundColor, borderColor 속성을 추출합니다
+        */
+        const { color, backgroundColor, borderColor } = messageStyles[type] || messageStyles.error
+
+        // 메시지 내용을 HTML 요소에 설정합니다
+        errorSpan.textContent = message
+        // 메시지를 화면에 보이도록 설정합니다
+        errorSpan.style.display = 'block'
+        // 구조분해할당으로 추출한 스타일 값들을 적용합니다
+        errorSpan.style.color = color
+        errorSpan.style.backgroundColor = backgroundColor
+        errorSpan.style.borderColor = borderColor
+
+        // 메시지 타입에 따라 자동 숨김 시간을 결정합니다
+        // 성공 메시지: 3초 후 사라짐
+        // 에러 메시지: 5초 후 사라짐 (더 오래 표시)        
+        const duration = type === 'success' ? 3000 : 5000
+
+        // 지정된 시간 후에 메시지를 자동으로 숨기는 타이머를 설정합니다
+        messageTimer = setTimeout(() => {
+            uiService.hideMessage()
+        }, duration)
     },
-    
-    // 전화번호 필드 검증 함수
-    phoneNumber: (phoneNumber) => {
-        // 1단계: 필수 입력 확인
-        if (isEmpty(phoneNumber)) {
-            return { 
-                isValid: false, 
-                message: messages.required.phoneNumber, 
-                field: 'phoneNumber' 
-            }
-        }
-        
-        // 2단계: 전화번호 형식 확인 - 숫자, 하이픈, 공백만 허용
-        if (!patterns.phoneNumber.test(safeTrim(phoneNumber))) {
-            return { 
-                isValid: false, 
-                message: messages.format.phoneNumber, 
-                field: 'phoneNumber' 
-            }
-        }
-        
-        // 3단계: 모든 검증 통과
-        return { isValid: true }
+
+    // 메시지를 숨기고 스타일을 초기화하는 함수 (화살표 함수)
+    hideMessage: () => {
+        // 메시지 표시 요소를 다시 찾습니다
+        const errorSpan = document.getElementById('formError')
+        // 요소가 존재하지 않으면 함수를 종료합니다
+        if (!errorSpan) return
+
+        // 메시지를 화면에서 숨깁니다
+        errorSpan.style.display = 'none'
+        // 이전에 적용된 스타일들을 제거합니다 (빈 문자열로 설정하면 CSS 기본값으로 돌아감)
+        errorSpan.style.backgroundColor = ''    // 배경색 초기화
+        errorSpan.style.borderColor = ''        // 테두리색 초기화
+
+        // 혹시 남아있는 타이머도 정리합니다
+        uiService.clearMessageTimer()
     },
-    
-    // 이메일 필드 검증 함수
-    email: (email) => {
-        // 1단계: 필수 입력 확인
-        if (isEmpty(email)) {
-            return { 
-                isValid: false, 
-                message: messages.required.email, 
-                field: 'email' 
-            }
-        }
-        
-        // 2단계: 이메일 형식 확인 - 기본적인 이메일 패턴 매칭
-        if (!patterns.email.test(safeTrim(email))) {
-            return { 
-                isValid: false, 
-                message: messages.format.email, 
-                field: 'email' 
-            }
-        }
-        
-        // 3단계: 모든 검증 통과
-        return { isValid: true }
-    }
-}
 
-// 메인 검증 함수 - 학생 객체 전체를 검증 (구조분해할당 사용)
-export const validateStudent = (student) => {
-    // 1단계: 입력 데이터 자체가 존재하는지 확인
-    if (!student) {
-        return { isValid: false, message: '학생 데이터가 필요합니다.' }
-    }
-    
-    // 2단계: 구조분해할당으로 필요한 데이터 추출
-    // student 객체에서 name, studentNumber, detailRequest 속성을 추출
-    const { name, studentNumber, detailRequest } = student
-    
-    // 3단계: 기본 필드들 순차적 검증 (name, studentNumber)
-    
-    // 이름 검증
-    const nameResult = validators.name(name)
-    if (!nameResult.isValid) {
-        return nameResult  // 검증 실패 시 즉시 결과 반환 (Early Return 패턴)
-    }
-    
-    // 학번 검증
-    const studentNumberResult = validators.studentNumber(studentNumber)
-    if (!studentNumberResult.isValid) {
-        return studentNumberResult  // 검증 실패 시 즉시 결과 반환
-    }
-    
-    // 4단계: 상세 정보(detailRequest)가 있는 경우에만 세부 검증 수행
-    if (detailRequest) {
-        // 구조분해할당으로 상세 정보에서 필요한 필드들 추출
-        const { address, phoneNumber, email } = detailRequest
-        
-        // 주소 검증
-        const addressResult = validators.address(address)
-        if (!addressResult.isValid) {
-            return addressResult  // 검증 실패 시 즉시 결과 반환
+    // 메시지 자동 숨김 타이머를 해제하는 함수 (화살표 함수)
+    clearMessageTimer: () => {
+        // 타이머가 설정되어 있는지 확인합니다
+        if (messageTimer) {
+            // 타이머를 취소합니다 (더 이상 실행되지 않음)
+            clearTimeout(messageTimer)
+            // 타이머 변수를 초기화합니다
+            messageTimer = null
         }
-        
-        // 전화번호 검증
-        const phoneResult = validators.phoneNumber(phoneNumber)
-        if (!phoneResult.isValid) {
-            return phoneResult  // 검증 실패 시 즉시 결과 반환
+    },
+
+    // 버튼의 로딩 상태를 관리하는 함수 (구조분해할당)
+    setButtonLoading: (button, isLoading = false, text = '') => {
+        // 버튼 요소가 존재하지 않으면 함수를 종료합니다
+        if (!button) return
+
+        // 로딩 상태에 따라 버튼을 비활성화/활성화합니다
+        // true: 버튼 클릭 불가, false: 버튼 클릭 가능
+        button.disabled = isLoading
+
+        // 새로운 텍스트가 제공되면 버튼 텍스트를 변경합니다
+        if (text) {
+            button.textContent = text  // 예: "등록 중..." 또는 "학생 등록"
         }
-        
-        // 이메일 검증
-        const emailResult = validators.email(email)
-        if (!emailResult.isValid) {
-            return emailResult  // 검증 실패 시 즉시 결과 반환
+
+        // 로딩 중일 때와 아닐 때의 시각적 스타일을 다르게 적용합니다
+        if (isLoading) {
+            // 로딩 중: 흐리게 표시하고 마우스 커서를 금지 표시로 변경
+            button.style.opacity = '0.7'        // 70% 투명도 (흐리게)
+            button.style.cursor = 'not-allowed' // 금지 커서
+        } else {
+            // 로딩 완료: 원래 상태로 복원
+            button.style.opacity = '1'      // 100% 불투명 (선명하게)
+            button.style.cursor = 'pointer' // 손가락 커서
         }
     }
-    
-    // 5단계: 모든 검증을 통과한 경우
-    return { isValid: true }
 }
-
-// 실시간 검증 함수 - 사용자가 입력하는 중에 개별 필드를 검증할 때 사용
-export const validateField = (fieldName, value) => {
-    // 1단계: 해당 필드명에 대응하는 검증 함수가 있는지 확인
-    // validators 객체에서 fieldName에 해당하는 함수를 찾음
-    const validator = validators[fieldName]
-    
-    // 2단계: 검증 함수가 없는 경우 (잘못된 필드명)
-    if (!validator) {
-        return { 
-            isValid: true,  // 알 수 없는 필드는 일단 통과로 처리
-            message: '알 수 없는 필드입니다.' 
-        }
-    }
-    
-    // 3단계: 해당 검증 함수 실행하여 결과 반환
-    return validator(value)
-}
-
-/*
-사용 예시:
-
-// 전체 학생 데이터 검증
-const studentData = {
-    name: '홍길동',
-    studentNumber: 'S12345',
-    detailRequest: {
-        address: '서울시 강남구',
-        phoneNumber: '010-1234-5678',
-        email: 'hong@example.com'
-    }
-}
-
-const result = validateStudent(studentData)
-if (!result.isValid) {
-    console.log(`검증 실패: ${result.message}`)
-    console.log(`문제 필드: ${result.field}`)
-}
-
-// 개별 필드 검증 (실시간 검증용)
-const emailResult = validateField('email', 'invalid-email')
-if (!emailResult.isValid) {
-    console.log(`이메일 오류: ${emailResult.message}`)
-}
-*/
