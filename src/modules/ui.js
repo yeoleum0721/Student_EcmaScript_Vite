@@ -1,6 +1,7 @@
-import { stringUtils } from "../utils/helpers";
-//desturcturing assignment
-const {isEmpty, safeTrim} = stringUtils;
+import { stringUtils } from '../utils/helpers';
+
+//destructuring assignment
+const { isEmpty, safeTrim } = stringUtils;
 
 // 유효성 검사 모듈 - 구조분해할당과 화살표 함수 사용
 
@@ -56,7 +57,7 @@ const validators = {
         // 2단계: 최소 길이 확인 - 이름은 최소 2글자 이상이어야 함
         if (safeTrim(name).length < 2) {
             return { 
-                isValid: false,
+                isValid: false, 
                 message: '이름은 최소 2글자 이상이어야 합니다.', 
                 field: 'name' 
             }
@@ -69,7 +70,7 @@ const validators = {
     // 학번 필드 검증 함수
     studentNumber: (studentNumber) => {
         // 1단계: 필수 입력 확인
-        if (!studentNumber || studentNumber.trim().length === 0) {
+        if (isEmpty(studentNumber)) {
             return { 
                 isValid: false, 
                 message: messages.required.studentNumber, 
@@ -143,7 +144,7 @@ const validators = {
     // 이메일 필드 검증 함수
     email: (email) => {
         // 1단계: 필수 입력 확인
-        if (isEmpty(emai)) {
+        if (isEmpty(email)) {
             return { 
                 isValid: false, 
                 message: messages.required.email, 
